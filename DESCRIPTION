@@ -1,0 +1,16 @@
+Package: BayGMRF
+Type: Package
+Title: Bayesian Latent Gaussian Markov Random Fields
+Version: 0.1.5
+Date: 2018-02-05
+Author: Volker Schmid
+Authors@R: c(person("Volker", "Schmid", role = c("aut", "cre"),
+		     email = "volker.schmid@lmu.de"))
+Maintainer: Volker Schmid <stats@volkerschmid.de>
+Description: Fitting all sorts of latent Gaussian Markov Random Fields using Full Bayes MCMC (under developement)
+License: GPL-3
+RoxygenNote: 6.0.1
+Requires: Matrix, oro.nifit, parallel
+Suggests: knitr,
+    rmarkdown
+VignetteBuilder: knitr

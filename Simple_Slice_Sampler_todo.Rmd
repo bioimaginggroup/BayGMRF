@@ -1,0 +1,31 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Simple slice sampler für adaptive GMRF ($w^0$ sei alter Wert):
+
+* Ziehe $w^*$ aus Ga
+* Falls "Markoveigenschaft" (z.B. eine Region hat nur einen Nachbar): Nimm $w^*$ an
+* Ist $w^*>w^0$: Nimm $w^*$ an
+* Sonst ziehe $u \sim U(0,1)$
+* Falls $u<w^*/w^0$, nimm $w^*$ an
+* Falls $u<|Q(w^*)|/|Q(w^*)|$, nimm $w^*$ an (rechenintensiv!)
+* Sonst wiederhole
+
+Funktioniert auch mit vielen w:
+
+* Ziehe alle $w_i^*$ aus Ga
+* Für alle $i$ mit "Markoveigenschaft" (z.B. eine Region hat nur einen Nachbar): Nimm $w^*_i$ an
+* Für alle $w_i^*>w^0_i$: Nimm $w^_i*$ an
+* Sonst ziehe $u \sim U(0,1)$
+* Für alle restlichen $i$: Falls $u<\prod (w_i^*/w^0_i)$, nimm $w_i^*$ an
+* Falls $u<|Q(w^*)|/|Q(w^*)|$, nimm $w_i^*$ an (rechenintensiv!)
+* Sonst wiederhole (für alle restlichen $i$?)
+
+Begründung:
+
+* Simple slice sampler entspricht wiederholtem MH-Algorithmus
+* ist $w^*>w^0$, dann ist $|Q(w^*)|>|Q(w^0)|$
+* ist $w^*<w^0$, dann ist $w^*/w^0 < |Q(w^*)|<|Q(w^0)|$, gilt auch für Produkt
+

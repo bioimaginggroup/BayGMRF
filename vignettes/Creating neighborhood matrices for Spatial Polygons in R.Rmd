@@ -1,0 +1,385 @@
+---
+title: "Creating neighborhood matrices for Spatial Polygons in R"
+author: "Volker Schmid"
+date: "September 18, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!-- source: https://aledemogr.wordpress.com/2015/10/09/creating-neighborhood-matrices-for-spatial-polygons/ -->
+
+## Creating neighborhood matrices for Spatial Polygons in R
+
+```{r}
+setwd("~/Downloads/vg250_0101.utm32s.shape.ebenen")
+shape = rgdal::readOGR(dsn="vg250_ebenen",layer="VG250_VWG")
+```
+
+### Contiguity based relations - First Order Queen Contiguity
+
+are the most used in the presence of irregular polygons with varying shape and surface, since contiguity ignores distance and focuses instead on the location of an area. The function poly2nb allows to create 2 types of contiguity based relations:
+
+FOQ contiguity defines a neighbor when at least one point on the boundary of one polygon is shared with at least one point of its neighbor (common border or corner);
+
+
+```{r}
+neighb = spdep::poly2nb(shape, queen=TRUE)
+#row.names refers to the unique names of each polygon
+
+neighb2 <- lapply(neighb, function(x)if(x[1]==0){return(NULL)}else{return(x)})
+N<-length(neighb2)
+n.nr <- unlist(lapply(neighb2,length))
+neighb2 <- unlist(neighb2)
+i = c(1:N, rep(1:N, n.nr))
+j = c(1:N, neighb2)
+x = c(n.nr, rep(-1, sum(n.nr)))
+matrix<-sparseMatrix(i=i,j=j,x=x)
+```
+
+
+Calling nb.FOQ you get a summary of the neighbor matrix, including the total number of areas/counties, and average number of links.
+2. First Order Rook Contiguity
+
+FOR contiguity does not include corners, only borders, thus comprising only polygons sharing more than one boundary point;
+1
+2
+	
+nb.RK = poly2nb(NC, queen=FALSE, row.names=NC$FIPSNO)
+nb.RK
+1
+2
+3
+4
+5
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 462
+## Percentage nonzero weights: 4.62
+## Average number of links: 4.62
+
+NB: if there is a region without any link, there will be a message like this:
+Neighbour list object:
+Number of regions: 910
+Number of nonzero links: 4620
+Percentage nonzero weights: 0.5924405
+Average number of links: 5.391209
+10 regions with no links:
+1014 3507 3801 8245 9018 10037 22125 30005 390299 390399
+
+where you can identify the regions with no links (1014, 3507,…) using which(…), and in R it is possible to “manually” connect them or change the neighbor matrix so that they can be included (such as graph or distance based neighbors).
+Sometimes, it also happens that some polygons that have been retouched (sounds like a blasphemy but it happens a lot with historical maps) may not recognize shared borders. This is when manually setting up neighbors comes in handy (you can’t do that in Geoda).
+
+Contiguity
+
+Higher order neighbors are useful when looking at the effect of lags on spatial autocorrelation and in spatial autoregressive models like SAR with a more global spatial autocorrelation:
+1
+2
+	
+nb.SRC = nblag(nb.RK,2) #second order rook contiguity
+nb.SRC
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+	
+## [[1]]
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 490
+## Percentage nonzero weights: 4.9
+## Average number of links: 4.9
+##
+## [[2]]
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 868
+## Percentage nonzero weights: 8.68
+## Average number of links: 8.68
+##
+## attr(,"call")
+## nblag(neighbours = nb.RK, maxlag = 2)
+Contiguity2
+B. Distance based neighbors
+
+DBN defines a set of connections between polygons either based on a (1) defined Euclidean distance between centroids dnearneigh or a certain (2) number of neighbors knn2nb (e.g. 5 nearest neighbors);
+1
+2
+3
+4
+	
+coordNC = coordinates(NC) #get centroids coordinates
+d05m = dnearneigh(coordNC, 0, 0.5, row.names=NC$FIPSNO)
+nb.5NN = knn2nb(knearneigh(coordNC,k=5),row.names=NC$FIPSNO) #set the number of neighbors (here 5)
+d05m
+1
+2
+3
+4
+5
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 430
+## Percentage nonzero weights: 4.3
+## Average number of links: 4.3
+1
+	
+nb.5NN
+1
+2
+3
+4
+5
+6
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 500
+## Percentage nonzero weights: 5
+## Average number of links: 5
+## Non-symmetric neighbours list
+
+a little trick: if you want information on neighbor distances whatever the type of neighborhood may be:
+1
+2
+	
+distance = unlist(nbdists(nb.5NN, coordNC))
+distance
+1
+2
+3
+4
+	
+##   [1] 0.3613728 0.3693554 0.3864847 0.2766561 0.5168459 0.3709748 0.2607982
+##   [8] 0.3232974 0.4376632 0.2862144 0.5773310 0.3778483 0.4463538 0.2914539
+## ...
+## [498] 0.3407192 0.3995114 0.1838115
+Distance
+C. Graph based (I’ve never used them, but it’s good to know that they exist)
+
+Delauney triangulation tri2nb constructs neighbors through Voronoi triangles such that each centroid is a triangle node. As a consequence, DT ensures that every polygon has a neighbor, even in presence of islands. The “problem” with this specification is that it treats our area of study as if it were an island itself, without any neighbors (as if North Carolina were an island with no Virginia or South Carolina)… Therefore, distant points that would not be neighbors (such as Cherokee and Brunswick counties) become such;
+Gabriel Graph gabrielneigh is a particular case of the DT, where a and b are two neighboring points/centroids if in the circles passing by a and b with diameter ab does not lie any other point/centroid;
+Sphere of Influence soi.graph: twopoints a and b are SOI neighbors if the circles centered on a and b, of radius equal to the a and b nearest neighbour distances, intersect twice. It is a sort of Delauney triangulation without the longest connections;
+Relative Neighbors relativeneigh is a particular case of GG. A border belongs to RN if the intersection formed by the two circles centered in a and b with radius ab does not contain any other point.
+1
+2
+	
+delTrinb = tri2nb(coordNC, row.names=NC$FIPSNO) #delauney triangulation
+summary(delTrinb)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 574
+## Percentage nonzero weights: 5.74
+## Average number of links: 5.74
+## Link number distribution:
+##
+##  2  3  4  5  6  7  8  9 10
+##  1  2 13 29 27 22  3  1  2
+## 1 least connected region:
+## 37039 with 2 links
+## 2 most connected regions:
+## 37005 37179 with 10 links
+1
+2
+	
+GGnb = graph2nb(gabrielneigh(coordNC), row.names=NC$FIPSNO) #gabriel graph
+summary(GGnb)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 204
+## Percentage nonzero weights: 2.04
+## Average number of links: 2.04
+## 20 regions with no links:
+## 37109 37131 37137 37141 37145 37147 37151 37159 37161 37165 37173 37175 37179 37183 37185 37187 37189 37195 37197 37199
+## Non-symmetric neighbours list
+## Link number distribution:
+##
+##  0  1  2  3  4  5  6  7
+## 20 27 16 15 13  7  1  1
+## 27 least connected regions:
+## 37047 37053 37055 37075 37091 37105 37107 37113 37115 37117 37119 37121 37129 37133 37135 37139 37143 37149 37153 37155 37157 37163 37167 37177 37181 37191 37193 with 1 link
+## 1 most connected region:
+## 37057 with 7 links
+1
+2
+	
+SOInb = graph2nb(soi.graph(delTrinb, coordNC), row.names=NC$FIPSNO) #sphere of influence
+summary(SOInb)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 470
+## Percentage nonzero weights: 4.7
+## Average number of links: 4.7
+## Link number distribution:
+##
+##  1  2  3  4  5  6  7  9
+##  1  5 12 26 30 15 10  1
+## 1 least connected region:
+## 37031 with 1 link
+## 1 most connected region:
+## 37097 with 9 links
+1
+2
+	
+RNnb = graph2nb(relativeneigh(coordNC), row.names=NC$FIPSNO) #relative graph
+summary(RNnb)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+	
+## Neighbour list object:
+## Number of regions: 100
+## Number of nonzero links: 133
+## Percentage nonzero weights: 1.33
+## Average number of links: 1.33
+## 31 regions with no links:
+## 37047 37053 37097 37107 37109 37115 37131 37137 37141 37143 37145 37147 37151 37155 37159 37161 37163 37165 37167 37173 37175 37179 37183 37185 37187 37189 37191 37193 37195 37197 37199
+## Non-symmetric neighbours list
+## Link number distribution:
+##
+##  0  1  2  3  4
+## 31 30 18 17  4
+## 30 least connected regions:
+## 37009 37027 37031 37035 37037 37039 37055 37073 37075 37083 37091 37095 37105 37113 37117 37119 37121 37125 37127 37129 37133 37135 37139 37149 37153 37157 37169 37171 37177 37181 with 1 link
+## 4 most connected regions:
+## 37001 37003 37059 37079 with 4 links
+
+GraphBased
+What to do with all this stuff? …
+
+compute and compare global Moran’s I
+LISA maps
+Variograms and correlograms
+…?
+Advertisements
+Share:
+
+    Click to share on Twitter (Opens in new window)4Share on Facebook (Opens in new window)4Click to share on Google+ (Opens in new window)5Click to share on LinkedIn (Opens in new window)5Click to share on Reddit (Opens in new window)Click to share on Tumblr (Opens in new window)More
+
+Related
+Moran plots in ggplot2
+Moran plots in ggplot2
+
+In "ggplot2"
+How to get good maps in R and avoid the expensive softwares
+How to get good maps in R and avoid the expensive softwares
+
+In "R"
+A Spatial Analysis of Recent Fertility Patterns in Spain - EPC poster
+A Spatial Analysis of Recent Fertility Patterns in Spain - EPC poster
+
+In "R"
+Author: acarioli
+
+is a PostDoc at the Geography and Environment department of the University of Southampton, WorldPop project team. She is also affiliated researcher at CED, UAB and Dondena Centre. Her interests include spatial econometrics and modeling, bayesian methods, machine learning processes, forecasting, micro-data simulation, and data visualization. Demo-traveler, Mac enthusiast, R zealot and Rladies member. View all posts by acarioli
+Author acarioliPosted on 9 October 2015Categories Maps, nearest neighbors, R, spatial demographyTags comparing neighbors, delauney triangulation, first order queen, first order rook, gabriel graph, maptools, nearest neighbors, R, relative graph, Spatial Demography, spdep, Triangulation	
+Post navigation
+Previous Previous post: Quick way to add annotations to your ggplot graphs
+Next Next post: Game of Thrones maps in R…
+Recents posts
+
+    Population Pyramids of Georgia in ggplot2
+    Long to wide format with tidyr (and save it in n files)
+    Geofacet: Bangladesh 64 districts education
+    Geofacet: Nepal 75 districts
+    Geofacet grids: Nigeria Federal States
+
+Tags
+Europe FFS Georgia ggplot2 graphics Human Fertility Database maptools R Spain Spatial Demography
+Category
+Category
+
+```
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

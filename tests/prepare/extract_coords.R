@@ -1,0 +1,8 @@
+g = system.file("demodata/germany.graph", package="INLA")
+library(INLA)
+graph<-inla.read.graph(g)
+coords<-c()
+for (i in 1:graph$n)
+  for (j in 1:graph$nnbs[i])
+    if (i<graph$nbs[[i]][j])
+      coords<-rbind(coords,c(i,graph$nbs[[i]][j]))

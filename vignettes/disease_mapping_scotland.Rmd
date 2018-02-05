@@ -1,0 +1,33 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r loadscotlanddata}
+rm(.Random.seed)
+library(BayGMRF)
+library(parallel)
+data(scotland)
+true<-rep(0,52)
+true[18:40]<-1
+true[23:25]<-true[29:32]<-true[35:37]<-2
+scotland.sim<-scotland.data[,-3]
+scotland.sim$E<-rpois(52,scotland.data$E-1)+1
+globalgamma<-sample(c(-1,0,1))
+gamma.true<-rnorm(52,globalgamma[true+1],.01)
+map(gamma.true,scotland.shape)
+```
+
+```{r prepareforBayGMRF}
+X<-list("covar"=scotland.data$X,"geo"=rep(1,52))
+Q.list=list("covar"=c("I",52),"geo"=scotland.coords)
+options=list("tau"=rep(TRUE,2),"print.time"=FALSE,sigma2=FALSE)
+mcmc<-list("iterations"=61,"thin"=1,"burnin"=1)
+options$X.t<-c(TRUE,FALSE)
+hyper<-list("tau.a"=c(0.001,0.001),"tau.b"=c(0.001,1))
+BayGMRF(Y=scotland.data$Counts, X=X, Q.list=Q.list, mcmc=mcmc, options=options,hyper=hyper,model="Poisson",E=scotland.data$E,Q.X=1:2)
+```
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+

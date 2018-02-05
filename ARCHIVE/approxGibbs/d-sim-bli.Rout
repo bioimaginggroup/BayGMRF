@@ -1,0 +1,66 @@
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+
+R version 3.1.0 (2014-04-10) -- "Spring Dance"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+During startup - Warning messages:
+1: Setting LC_CTYPE failed, using "C" 
+2: Setting LC_COLLATE failed, using "C" 
+3: Setting LC_TIME failed, using "C" 
+4: Setting LC_MESSAGES failed, using "C" 
+5: Setting LC_MONETARY failed, using "C" 
+6: Setting LC_PAPER failed, using "C" 
+7: Setting LC_MEASUREMENT failed, using "C" 
+> library(adm)
+> library(parallel)
+> data(Germanydata)
+> data(germanycoords)
+> data(germanySimBl)
+> 
+> options(mc.cores=32)
+> 
+> goforit<-function(i)
++ {
++ return(adm(Y.sim[[i]], Germany$E, coords, nr.it=1500, burnin=500, thin=1, nu=c(1,1), adaptive=FALSE, method="", do.kappa=TRUE,  kappa=1, ab.kappa=c(1,.001), tau=1000, print.time=FALSE))
++ }
+> 
+> sim.alli<-mclapply(1:10,goforit)
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: Matrix
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+Loading required package: truncnorm
+............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................> save.image(file="d-sim-bli.Rdata")
+> 
+> 
+> 
+> proc.time()
+    user   system  elapsed 
+5847.520 1011.671 1092.094 

@@ -1,0 +1,5 @@
+ToDo
+
+* Check update sigma2
+* Poisson: update.eta() ??
+* dm_scotland continued...
