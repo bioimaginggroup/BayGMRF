@@ -1,0 +1,115 @@
+---
+title: "Data for Maqsood"
+author: "Volker Schmid"
+date: "23 2 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Smaller areas
+
+Aim: Create smaller areas from Germany map.
+
+```{r cars}
+library(BayGMRF)
+load("inst/germanymap.RData")
+states <- list(); states[[1]] <- 1:15; states[[2]] <- 16; states[[3]] <- 17:63; states[[4]] <- 64:65;
+  states[[5]] <- 66:119; states[[6]] <- 120:145; states[[7]] <- 146:181; states[[8]] <- 182:225;
+  states[[9]] <- 226:321; states[[10]] <- 322:327; states[[11]] <- 328:329; states[[12]] <- 330:373;
+  states[[13]] <- 374:410; states[[14]] <- 411:464; states[[15]] <- 465:504; states[[16]] <- 505:544;
+```
+
+West Germany: 1:327
+North Germany: 1:65 + 374:410 (SH, HH, HB, NI, MV)
+
+```{r}
+  loc="inst/germany.adjacency.arranged";  n <- as.numeric(readLines(loc, n = 1)); nnodes <- id <- numeric(n); adj <- list();
+  for (i in 1:n) {
+    tmp <- as.numeric(scan(loc, skip=i, nlines = 1, quiet = T, what = list(rep("", 13)))[[1]])
+    id[i] <- tmp[1]; nnodes[i] <- tmp[2]; adj[[i]] <- tmp[-c(1:2)]
+  }
+
+adj.west<-adj[1:327]
+adj.north<-adj[c(1:65, 374:410 )]
+nnodes.west<-nnodes[1:327]
+nnodes.north<-nnodes[c(1:65, 374:410 )]
+
+id.west=1:327
+for (i in 1:327)
+{
+  tmp<-adj.west[[i]]
+  tmp<-tmp[tmp<=327]
+  adj.west[[i]]<-tmp
+  nnodes.west[i]<-length(tmp)
+}
+
+id.north<-1:length(nnodes.north)
+for (i in 1:length(nnodes.north)){
+  tmp<-adj.north[[i]]
+  tmp<-tmp[tmp<=65|(tmp>=374&tmp<=410)]
+  tmp[tmp>65]<-tmp[tmp>65]-308
+  adj.north[[i]]<-tmp
+  nnodes.north[i]<-length(tmp)
+}
+
+states.west<-list()
+states.west[[1]] <- 1:15
+states.west[[2]] <- 16
+states.west[[3]] <- 17:63
+states.west[[4]] <- 64:65
+states.west[[5]] <- 66:119
+states.west[[6]] <- 120:145
+states.west[[7]] <- 146:181
+states.west[[8]] <- 182:225
+states.west[[9]] <- 226:321
+states.west[[10]] <- 322:327
+
+states.west.less<-list()
+states.west.less[[1]] <- 1:16
+states.west.less[[2]] <- 17:65
+states.west.less[[3]] <- 66:119
+states.west.less[[4]] <- 120:145
+states.west.less[[5]] <- c(146:181,322:327)
+states.west.less[[6]] <- 182:225
+states.west.less[[7]] <- 226:321
+
+
+states.north <- list()
+states.north[[1]] <- 1:15
+states.north[[2]] <- 16
+states.north[[3]] <- 17:63
+states.north[[4]] <- 64:65
+states.north[[5]] <- (374:410)-308
+
+states.north.less <- list()
+states.north.less[[1]] <- 1:16
+states.north.less[[2]] <- 17:65
+states.north.less[[3]] <- (374:410)-308
+
+id=id.north; nnodes=nnodes.north; adj=adj.north; states=states.north.less
+save(id,nnodes,adj,states,file = "north-less.Rdata")
+
+states=states.north
+save(id,nnodes,adj,states,file = "north-all.Rdata")
+
+id=id.west; nnodes=nnodes.west; adj=adj.west; states=states.west.less
+save(id,nnodes,adj,states,file = "west-less.Rdata")
+
+states=states.west
+save(id,nnodes,adj,states,file = "west-all.Rdata")
+
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
