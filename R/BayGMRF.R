@@ -101,9 +101,11 @@ BayGMRF <- function(Y,X,Q.list,mcmc,options,hyper,model="Gaussian",E=1,Q.X=1)
   if (length(tau)!=s.tau)tau<-rep(tau,s.tau)
   sigma2 <- hyper$sigma2.b/hyper$sigma2.a
   XX <- lapply(X,function(X)sum(X^2))
-  if (model=="Gaussian")resid <- Y
-  if (model=="Poisson")eta <- resid<-log(Y+1)  
+  if (model=="Gaussian") resid <- Y
+  if (model=="Poisson") eta <- resid <- log(Y+1)  
   if(options$print.time)start.time<-proc.time()
+  
+  
   cat("Starting iterations.\n")
   for (iteration in 1:mcmc$iterations){
     for (i in 1:s)
@@ -117,17 +119,27 @@ BayGMRF <- function(Y,X,Q.list,mcmc,options,hyper,model="Gaussian",E=1,Q.X=1)
         {
           resid[partial[[i]],] <- resid[partial[[i]],]+beta[[i]]%*%t(X[[i]])
         }
+
       if (model=="Gaussian")b <- resid[partial[[i]],]%*%X[[i]]/sigma2
       if (model=="Poisson")b <- hyper$eta*eta[partial[[i]],]
       beta[[i]] <- as.vector(BayGMRF::rmvnormcanon(n = 1, b = b, P = P))
-      resid[partial[[i]],] <- resid[partial[[i]],]-beta[[i]]%*%t(X[[i]])
+      
+      if (X.t[i])
+      {
+        resid[partial[[i]],] <- resid[partial[[i]],]-beta[[i]]*X[[i]]
+      }
+      else
+      {
+        resid[partial[[i]],] <- resid[partial[[i]],]-beta[[i]]%*%t(X[[i]])
+      }
     }  
     
     tau<-unlist(lapply(1:s.tau,update.tau,tau,beta,Q,Q.X,d,hyper,options))
     
     if(options$sigma2){
       aa <- hyper$sigma2.a + N*T/2
-      bb <- hyper$sigma2.b + as.vector(0.5*sum(resid^2))
+      if(model=="Gaussian")bb <- hyper$sigma2.b + as.vector(0.5*sum((resid-Y)^2))
+      if(model=="Poisson")stop("no sigma2 in Poisson model")
       sigma2 <- 1/rgamma(n = 1,  shape = aa, rate = bb)
     }
     

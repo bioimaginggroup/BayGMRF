@@ -66,9 +66,9 @@ lines(index, auditory.hrf, type="l", xlab="Zeit [sec]", ylab="Auditiver Stimulus
 ```{r single, cache=TRUE, echo=TRUE, collapse=TRUE}
 X <- auditory.hrf
 Y <- new$data
-hyper<-list("sigma2.a"=1,"sigma2.b"=1,"tau.a"=0.001,"tau.b"=1)
+hyper<-list("sigma2.a"=100,"sigma2.b"=100,"tau.a"=0.001,"tau.b"=1)
 mcmc<-list("iterations"=600,"thin"=1,"burnin"=100)
-options=list("tau"=TRUE,"sigma2"=FALSE,"print.time"=FALSE)
+options=list("tau"=TRUE,"sigma2"=TRUE,"print.time"=FALSE,"X.true"=FALSE)
 test <- BayGMRF(Y,X=X,Q.list=list(new$nn),mcmc=mcmc,options=options,hyper=hyper)
 ```
 
@@ -85,9 +85,33 @@ X2 <- list("auditory"=auditory.hrf,"visual"=visual.hrf)
 Q.list <- list(new$nn)
 Q.X=c(1,1)
 hyper2<-list("sigma2.a"=1,"sigma2.b"=1,"tau.a"=rep(0.001,2),"tau.b"=rep(1,2))
-options2=list("tau"=rep(TRUE,2),"sigma2"=FALSE,"print.time"=FALSE)
+options2=list("tau"=rep(TRUE,2),"sigma2"=TRUE,"print.time"=TRUE,"X.true"=rep(FALSE,2))
+test1 <- BayGMRF(Y,X=X2,Q.list=Q.list,mcmc=mcmc,options=options2,hyper=hyper2,Q.X=Q.X)
 test2 <- BayGMRF(Y,X=X2,Q.list=Q.list,mcmc=mcmc,options=options2,hyper=hyper2,Q.X=Q.X)
+test3 <- BayGMRF(Y,X=X2,Q.list=Q.list,mcmc=mcmc,options=options2,hyper=hyper2,Q.X=Q.X)
+test4 <- BayGMRF(Y,X=X2,Q.list=Q.list,mcmc=mcmc,options=options2,hyper=hyper2,Q.X=Q.X)
 ```
+
+```{r}
+library(coda)
+tau1.sample<-as.mcmc.list(list(mcmc(test1$tau[,1]),mcmc(test2$tau[,1]),mcmc(test3$tau[,1]),mcmc(test4$tau[,1])))
+tau2.sample<-as.mcmc.list(list(mcmc(test1$tau[,2]),mcmc(test2$tau[,2]),mcmc(test3$tau[,2]),mcmc(test4$tau[,2])))
+coda::gelman.diag(tau1.sample)
+coda::gelman.diag(tau2.sample)
+
+sigma2.sample<-as.mcmc.list(list(mcmc(test1$sigma2),mcmc(test2$sigma2),mcmc(test3$sigma2),mcmc(test4$sigma2)))
+coda::gelman.diag(sigma2.sample)
+```
+```{r}
+for (i in 1:2)
+  for (j in 1:1390)
+  {
+    sample<-as.mcmc.list(list(mcmc(test1$beta[[i]][,j]),mcmc(test2$beta[[i]][,j]),mcmc(test3$beta[[i]][,j]),mcmc(test4$beta[[i]][,j])))
+    temp<-coda::gelman.diag(sample)
+    if (temp$psrf[2]>1.1)print(paste(i,j))
+  }
+```
+
 
 ```{r doubleresults, cache=TRUE, echo=TRUE, collapse=TRUE}
 par(mfrow=c(2,1))
@@ -120,7 +144,8 @@ Q.X3<-rep(1:2,each=21)
 X3<-mclapply(Q.X3,function(i,a,v)ifelse(i==1,return(a),return(v)),a=auditory.hrf,v=visual.hrf)
 options2$share.tau<-Q.X3
 options2$partial=partial
-#options2$print.time<-TRUE
+options2$X.true=rep(FALSE,42)
+options2$print.time<-TRUE
 test3 <- BayGMRF(Y=Y3,X=X3,Q.list=Q.list3,mcmc=mcmc,options=options2,hyper=hyper2,Q.X=rep(1:21,2))
 ```
 
@@ -138,3 +163,36 @@ plot(test3$tau[,1])
 plot(test3$tau[,2])
 plot(test3$sigma2)
 ```
+
+## 3D
+
+```{r}
+pp<-prepare.regular(data,mask)
+options4=list("tau"=rep(TRUE,2),"sigma2"=TRUE,"print.time"=TRUE,"X.true"=rep(FALSE,2))
+test4 <- BayGMRF(Y=pp$data,X=X2,Q.list=list(pp$nn),mcmc=mcmc,options=options2,hyper=hyper2,Q.X=c(1,1))
+
+```
+
+```{r}
+beta.med1<-apply(test4$beta[[1]],2,median)
+beta.med2<-apply(test4$beta[[2]],2,median)
+
+beta.med<-beta.med1
+m<-array(NA,c(dim(data)[1:3]))
+for (i in 1:dim(pp$coords)[1])
+  {
+    m[pp$coords[i,1],pp$coords[i,2],pp$coords[i,3]]<-beta.med[i]
+}
+beta1<-oro.nifti::as.nifti(m)
+beta.med<-beta.med2
+m<-array(NA,c(dim(data)[1:3]))
+for (i in 1:dim(pp$coords)[1])
+  {
+    m[pp$coords[i,1],pp$coords[i,2],pp$coords[i,3]]<-beta.med[i]
+}
+beta2<-oro.nifti::as.nifti(m)
+  
+image(beta1)
+image(beta2)
+```
+
