@@ -104,8 +104,7 @@ BayGMRF <- function(Y,X,Q.list,mcmc,options,hyper,model="Gaussian",E=1,Q.X=1)
   if (model=="Gaussian") resid <- Y
   if (model=="Poisson") eta <- resid <- log(Y+1)  
   if(options$print.time)start.time<-proc.time()
-  
-  
+
   cat("Starting iterations.\n")
   for (iteration in 1:mcmc$iterations){
     for (i in 1:s)
